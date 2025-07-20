@@ -36,21 +36,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install selenium behave
 
-      - name: Install Google Chrome and ChromeDriver
+      - name: Install ChromeDriver
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip curl
-
-          # Install Google Chrome
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
-
-          # Get the Chrome major version
+          # Get Chrome version (e.g., 117 from "Google Chrome 117.0.5938.92")
           CHROME_VERSION=$(google-chrome --version | grep -oP '\d+' | head -1)
 
-          # Get matching ChromeDriver version
-          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION}")
+          # Download matching ChromeDriver version
+          DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
           curl -sS -o chromedriver.zip "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
+
+          # Install it to PATH
           unzip -o chromedriver.zip
           chmod +x chromedriver
           sudo mv chromedriver /usr/local/bin/
