@@ -1,0 +1,70 @@
+name: Run Courses 2 Automation Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Chọn chế độ test"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - specific
+      test_file:
+        description: "Tên file .feature cần test (Nếu chế độ test là specific | Không cần điền đuôi .feature)"
+        required: false
+        type: string
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install selenium behave
+
+      - name: Install Google Chrome and ChromeDriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip xvfb libxi6 libgconf-2-4
+
+          # Install Google Chrome
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+          # Get Chrome version
+          CHROME_VERSION=$(google-chrome --version | grep -oP '[0-9.]+' | head -1 | cut -d '.' -f 1)
+
+          # Install matching ChromeDriver
+          DRIVER_VERSION=$(wget -qO- "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+          wget -O chromedriver.zip "https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip"
+          unzip chromedriver.zip
+          chmod +x chromedriver
+          sudo mv chromedriver /usr/local/bin/
+
+      - name: Run all tests
+        if: ${{ github.event.inputs.mode == 'all' }}
+        run: |
+          python run_automation_test.py
+
+      - name: Run specific test file with retry
+        if: ${{ github.event.inputs.mode == 'specific' }}
+        run: |
+          if [ -z "${{ github.event.inputs.test_file }}" ]; then
+            echo "Error: test_file input is required in 'specific' mode."
+            exit 1
+          fi
+          behave features/templates/${{ github.event.inputs.test_file }}.feature
